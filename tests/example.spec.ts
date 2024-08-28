@@ -1,22 +1,24 @@
 import { test, expect } from '@playwright/test';
-import { expect as baseExpect, ExpectMatcherState, Locator, MatcherReturnType } from '@playwright/test';
+import { expect as baseExpect, ExpectMatcherState, MatcherReturnType } from '@playwright/test';
+
+import matchers from './matchers.cjs'
+const { toHaveText } = (matchers as any).default ?? matchers;
 
 const dateExpect = baseExpect.extend({
   async toHaveText(this: ExpectMatcherState, date: Date, expected: string | RegExp, options?: { ignoreCase?: boolean, timeout?: number }): Promise<MatcherReturnType> {
-    try {
-      if (date instanceof Date) {
+    if (date instanceof Date) {
+      try {
         if (expected instanceof RegExp) {
           baseExpect(date.toISOString()).toMatch(expected);
         } else {
           baseExpect(date.toISOString()).toBe(expected);
         }
-      } else {
-        baseExpect(date as Locator).toHaveText(expected, options);
+        return { pass: true, message: () => `Expected ${date.toISOString()} not to have text ${expected}` };
+      } catch (error: any) {
+        return { pass: false, message: () => error.message, expected, actual: error.matcherResult?.accept };
       }
-
-      return { pass: true, message: () => 'Date is correct' };
-    } catch (error: any) {
-      return { pass: false, message: () => error.message, expected, actual: error.matcherResult?.accept };
+    } else {
+      return toHaveText.call(this, date, expected, options);
     }
   },
 });
